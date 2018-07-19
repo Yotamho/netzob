@@ -256,6 +256,16 @@ class Format(object):
         FieldSplitDelimiter.split(field, delimiter)
 
     @staticmethod
+    @typeCheck(AbstractField, list)
+    def splitOffset(field, offsets):
+        """
+        Splits a field according to given offsets
+        :param field:
+        :param offsets:
+        :return:
+        """
+
+    @staticmethod
     @typeCheck(AbstractField)
     def resetFormat(field):
         """Reset the format (field hierarchy and definition domain) of
