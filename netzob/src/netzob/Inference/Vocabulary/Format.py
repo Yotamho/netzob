@@ -43,6 +43,7 @@
 #| Local application imports                                                 |
 #+---------------------------------------------------------------------------+
 from netzob.Common.Utils.Decorators import typeCheck
+from netzob.Inference.Vocabulary.FormatOperations.FieldSplitOffset import FieldSplitOffset
 from netzob.Model.Vocabulary.AbstractField import AbstractField
 from netzob.Model.Vocabulary.Symbol import Symbol
 from netzob.Model.Vocabulary.Types.AbstractType import AbstractType
@@ -264,6 +265,7 @@ class Format(object):
         :param offsets:
         :return:
         """
+        FieldSplitOffset.split(field, offsets)
 
     @staticmethod
     @typeCheck(AbstractField)
