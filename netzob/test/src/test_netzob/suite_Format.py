@@ -1,6 +1,9 @@
 import unittest
 from netzob.Import.PCAPImporter.all import PCAPImporter
+from netzob.Inference.Vocabulary.CorrelationFinder import CorrelationFinder
+from netzob.Inference.Vocabulary.EntropyMeasurement import EntropyMeasurement
 from netzob.Inference.Vocabulary.FormatOperations.FieldSplitOffset import FieldSplitOffset
+from netzob.Inference.Vocabulary.RelationFinder import RelationFinder
 from netzob.Inference.Vocabulary.all import Format
 from netzob.Model.Vocabulary.Field import Field
 from netzob.Model.Vocabulary.Symbol import Symbol
@@ -16,12 +19,27 @@ class TestFormat(unittest.TestCase):
     def test_split_offset():
         BPF_FILTER = "!(arp) and !(len == 96)"
 
-        messages = PCAPImporter.readFile("/home/research/Downloads/hunter_no_vlan.pcap", nbPackets=500,
+        messages = PCAPImporter.readFile("/home/research/Downloads/hunter_no_vlan.pcap", nbPackets=1000,
                                          bpfFilter=BPF_FILTER).values()
+        bytes_entropy = [byte_entropy for byte_entropy in EntropyMeasurement.measure_entropy(messages)]
+        print(bytes_entropy)
         symbol = Symbol(messages=messages)
-        Format.splitOffset(symbol.fields[0], [3, 4])
-        # Format.clusterByKeyField(symbol.fields[0], symbol.fields[0].fields[1])
-        print(symbol)
+        Format.splitOffset(symbol, [3, 4])
+        clusters = Format.clusterByKeyField(symbol, symbol.fields[1])
+        for key, value in clusters.items():
+            print(key)
+            print(value)
+            rels = RelationFinder.findOnSymbol(value)
+            for rel in rels:
+                print("  " + rel["relation_type"] + ", between '" + rel["x_attribute"] + "' of:")
+                print("    " + str('-'.join([f.name for f in rel["x_fields"]])))
+                p = [v.getValues()[:] for v in rel["x_fields"]]
+                print("    " + str(p))
+                print("  " + "and '" + rel["y_attribute"] + "' of:")
+                print("    " + str('-'.join([f.name for f in rel["y_fields"]])))
+                p = [v.getValues()[:] for v in rel["y_fields"]]
+                print("    " + str(p))
+
 
     @staticmethod
     def test_split_delimiter():
@@ -30,8 +48,7 @@ class TestFormat(unittest.TestCase):
         messages = PCAPImporter.readFile("/home/research/Downloads/hunter_no_vlan.pcap", nbPackets=10,
                                          bpfFilter=BPF_FILTER).values()
         symbol = Symbol(messages=messages)
-        Format.splitDelimiter(symbol.fields[0], Raw(b'\05'))
-        print(symbol)
+        clusters = Format.splitDelimiter(symbol.fields[0], Raw(b'\05'))
 
     # @staticmethod
     # def test_message_parser():
