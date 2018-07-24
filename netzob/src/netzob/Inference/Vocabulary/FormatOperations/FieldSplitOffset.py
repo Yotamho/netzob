@@ -3,7 +3,10 @@ from netzob.Common.Utils.Decorators import NetzobLogger, typeCheck
 from netzob.Model.Vocabulary.AbstractField import AbstractField
 from netzob.Model.Vocabulary.Domain.DomainFactory import DomainFactory
 from netzob.Model.Vocabulary.Field import Field
+from netzob.Model.Vocabulary.Types.BitArray import BitArray
+from netzob.Model.Vocabulary.Types.HexaString import HexaString
 from netzob.Model.Vocabulary.Types.Raw import Raw
+from netzob.Model.Vocabulary.Types.TypeConverter import TypeConverter
 
 
 @NetzobLogger
@@ -25,46 +28,37 @@ class FieldSplitOffset(object):
 
         for cell in field.getValues(encoded=False, styled=False):
             splitted_messages.append(FieldSplitOffset.split_bytes_by_offsets(cell, offsets))
-        splitted_fields = list(itertools.zip_longest(*splitted_messages))
+        splitted_fields = [list(set(domain)) for domain in itertools.zip_longest(*splitted_messages)]
         new_fields = []
-        i_field = -1
-        for i in range(len(splitted_fields)):
-            i_field += 1
+        for (i, val) in enumerate(splitted_fields):
+            fName = "Field-{0}".format(i)
+            fDomain = DomainFactory.normalizeDomain([
+                Raw(TypeConverter.convert(v, HexaString, BitArray))
+                for v in set(val)
+            ])
+            new_fields.append(Field(domain=fDomain, name=fName))
 
-            field_domain = list()
+        # attach encoding functions
+        for newField in new_fields:
+            newField.encodingFunctions = list(field.encodingFunctions.values())
 
-            # temporary set that hosts all the observed values to prevent useless duplicate ones
-            observed_values = set()
-            has_inserted_empty_value = False
-
-            is_empty_field = True  # To avoid adding an empty field
-            for v in splitted_fields[i]:
-                if v != "" and v is not None:
-                    is_empty_field = False
-
-                    if v not in observed_values:
-                        field_domain.append(Raw(v))
-                        observed_values.add(v)
-                else:
-                    if not has_inserted_empty_value:
-                        field_domain.append(Raw(nbBytes=0))
-                        has_inserted_empty_value = True
-
-            if not is_empty_field:
-                new_field = Field(
-                    domain=DomainFactory.normalizeDomain(field_domain),
-                    name="Field-" + str(i_field))
-                new_field.encodingFunctions = list(
-                    field.encodingFunctions.values())
-                new_fields.append(new_field)
-                i_field += 1
-
-        # Reset the field
-        from netzob.Inference.Vocabulary.Format import Format
-        Format.resetFormat(field)
-
-        # Create a field for each entry
         field.fields = new_fields
+
+    # @staticmethod
+    # def split_bytes_by_offsets(bytes_, offsets):
+    #     """
+    #
+    #     :param bytes_:
+    #     :param offsets:
+    #     :return:
+    #     """
+    #     splitted_message = []
+    #     splitted_message.append(TypeConverter.convert(bytes_[:offsets[0]], Raw, HexaString))
+    #     for i, offset in enumerate(offsets[1:]):
+    #         splitted_message.append(TypeConverter.convert(bytes_[offsets[i]:offset], Raw, HexaString))
+    #         bytes_ = bytes_[offset:]
+    #     splitted_message.append(TypeConverter.convert(bytes_, Raw, HexaString))
+    #     return splitted_message
 
     @staticmethod
     def split_bytes_by_offsets(bytes_, offsets):
@@ -75,9 +69,9 @@ class FieldSplitOffset(object):
         :return:
         """
         splitted_message = []
-        splitted_message.append(bytes_[:offsets[0]])
-        for i, offset in enumerate(offsets[1:]):
-            splitted_message.append(bytes_[offsets[i]:offset])
-            bytes_ = bytes_[offset:]
-        splitted_message.append(bytes_)
+        offsets.insert(0, 0)
+        for i, start_offset in enumerate(offsets[:-1]):
+            splitted_message.append(TypeConverter.convert(bytes_[:offsets[i+1]-start_offset], Raw, HexaString))
+            bytes_ = bytes_[offsets[i+1]-start_offset:]
+        splitted_message.append(TypeConverter.convert(bytes_, Raw, HexaString))
         return splitted_message

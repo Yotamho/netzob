@@ -5,7 +5,9 @@ from netzob.Inference.Vocabulary.EntropyMeasurement import EntropyMeasurement
 from netzob.Inference.Vocabulary.FormatOperations.FieldSplitOffset import FieldSplitOffset
 from netzob.Inference.Vocabulary.RelationFinder import RelationFinder
 from netzob.Inference.Vocabulary.all import Format
+from netzob.Model.Vocabulary.Domain.Parser.MessageParser import MessageParser
 from netzob.Model.Vocabulary.Field import Field
+from netzob.Model.Vocabulary.Messages.AbstractMessage import AbstractMessage
 from netzob.Model.Vocabulary.Symbol import Symbol
 from netzob.Model.Vocabulary.Types.Raw import Raw
 
@@ -18,27 +20,34 @@ class TestFormat(unittest.TestCase):
     @staticmethod
     def test_split_offset():
         BPF_FILTER = "!(arp) and !(len == 96)"
+        mp = MessageParser()
 
-        messages = PCAPImporter.readFile("/home/research/Downloads/hunter_no_vlan.pcap", nbPackets=1000,
+        messages = PCAPImporter.readFile("/home/research/Downloads/hunter_no_vlan.pcap", nbPackets=50,
                                          bpfFilter=BPF_FILTER).values()
         bytes_entropy = [byte_entropy for byte_entropy in EntropyMeasurement.measure_entropy(messages)]
         print(bytes_entropy)
         symbol = Symbol(messages=messages)
-        Format.splitOffset(symbol, [3, 4])
+        Format.splitOffset(symbol, [3, 4, 5])
+        # print(mp.parseMessage(AbstractMessage(symbol.messages[0].data), symbol))
+        # return symbol
+        # mp.parseMessage(messages[0], symbol)
+        # print(symbol.specialize())
+        Format.splitOffset(symbol, [3, 4, 5])
+        # print(mp.parseMessage(messages[0], symbol))
         clusters = Format.clusterByKeyField(symbol, symbol.fields[1])
         for key, value in clusters.items():
             print(key)
             print(value)
-            rels = RelationFinder.findOnSymbol(value)
-            for rel in rels:
-                print("  " + rel["relation_type"] + ", between '" + rel["x_attribute"] + "' of:")
-                print("    " + str('-'.join([f.name for f in rel["x_fields"]])))
-                p = [v.getValues()[:] for v in rel["x_fields"]]
-                print("    " + str(p))
-                print("  " + "and '" + rel["y_attribute"] + "' of:")
-                print("    " + str('-'.join([f.name for f in rel["y_fields"]])))
-                p = [v.getValues()[:] for v in rel["y_fields"]]
-                print("    " + str(p))
+        #     rels = RelationFinder.findOnSymbol(value)
+        #     for rel in rels:
+        #         print("  " + rel["relation_type"] + ", between '" + rel["x_attribute"] + "' of:")
+        #         print("    " + str('-'.join([f.name for f in rel["x_fields"]])))
+        #         p = [v.getValues()[:] for v in rel["x_fields"]]
+        #         print("    " + str(p))
+        #         print("  " + "and '" + rel["y_attribute"] + "' of:")
+        #         print("    " + str('-'.join([f.name for f in rel["y_fields"]])))
+        #         p = [v.getValues()[:] for v in rel["y_fields"]]
+        #         print("    " + str(p))
 
 
     @staticmethod
@@ -48,7 +57,17 @@ class TestFormat(unittest.TestCase):
         messages = PCAPImporter.readFile("/home/research/Downloads/hunter_no_vlan.pcap", nbPackets=10,
                                          bpfFilter=BPF_FILTER).values()
         symbol = Symbol(messages=messages)
-        clusters = Format.splitDelimiter(symbol.fields[0], Raw(b'\05'))
+        Format.splitDelimiter(symbol.fields[0], Raw(b'\05'))
+
+    @staticmethod
+    def test_split_static():
+        BPF_FILTER = "!(arp) and !(len == 96)"
+
+        messages = PCAPImporter.readFile("/home/research/Downloads/hunter_no_vlan.pcap", nbPackets=10,
+                                         bpfFilter=BPF_FILTER).values()
+        symbol = Symbol(messages=messages)
+        Format.splitStatic(symbol)
+        return symbol
 
     # @staticmethod
     # def test_message_parser():
@@ -61,3 +80,6 @@ class TestFormat(unittest.TestCase):
 TestFormat.test_split_offset()
 # TestFormat.test_split_delimiter()
 # TestFormat.test_message_parser()
+# good_symbol = TestFormat.test_split_static()
+# print(5j)
+# print(FieldSplitOffset.split_bytes_by_offsets(b'\x07\xbe[\x05\x08,3c\x80\x00\x07\x00d', [3,4,5,12]))
