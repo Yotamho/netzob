@@ -174,9 +174,12 @@ class RelationFinder(object):
                         isRelation = False
                         break
                 if isRelation:
-                    # Do no keep relations where a field's values does not change
-                    if len(set(x_values)) == 1 or len(set(y_values)) == 1:
-                        continue
+
+                    #TODO make configurable
+                    # # Do no keep relations where a field's values does not change
+                    # if len(set(x_values)) == 1 or len(set(y_values)) == 1:
+                    #     continue
+
                     (x_fields, x_attribute) = attributeValues_headers[i]
                     (y_fields, y_attribute) = attributeValues_headers[j]
                     # The relation should not apply on the same field

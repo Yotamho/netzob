@@ -32,8 +32,6 @@ class TestFormat(unittest.TestCase):
         new_symbol = list(clusters.items())[-1][1]
         print(new_symbol)
         rels = RelationFinder.findOnSymbol(new_symbol)
-        for child in new_symbol.fields[-1].domain.children:
-            print(len(child.currentValue))
         for rel in rels:
             print("  " + rel["relation_type"] + ", between '" + rel["x_attribute"] + "' of:")
             print("    " + str('-'.join([f.name for f in rel["x_fields"]])))
