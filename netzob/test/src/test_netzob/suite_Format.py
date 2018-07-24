@@ -20,34 +20,29 @@ class TestFormat(unittest.TestCase):
     @staticmethod
     def test_split_offset():
         BPF_FILTER = "!(arp) and !(len == 96)"
-        mp = MessageParser()
-
-        messages = PCAPImporter.readFile("/home/research/Downloads/hunter_no_vlan.pcap", nbPackets=50,
+        messages = PCAPImporter.readFile("/home/research/Downloads/hunter_no_vlan.pcap", nbPackets=1000,
                                          bpfFilter=BPF_FILTER).values()
         bytes_entropy = [byte_entropy for byte_entropy in EntropyMeasurement.measure_entropy(messages)]
         print(bytes_entropy)
         symbol = Symbol(messages=messages)
         Format.splitOffset(symbol, [3, 4, 5])
-        # print(mp.parseMessage(AbstractMessage(symbol.messages[0].data), symbol))
-        # return symbol
-        # mp.parseMessage(messages[0], symbol)
-        # print(symbol.specialize())
-        Format.splitOffset(symbol, [3, 4, 5])
-        # print(mp.parseMessage(messages[0], symbol))
         clusters = Format.clusterByKeyField(symbol, symbol.fields[1])
-        for key, value in clusters.items():
-            print(key)
-            print(value)
-        #     rels = RelationFinder.findOnSymbol(value)
-        #     for rel in rels:
-        #         print("  " + rel["relation_type"] + ", between '" + rel["x_attribute"] + "' of:")
-        #         print("    " + str('-'.join([f.name for f in rel["x_fields"]])))
-        #         p = [v.getValues()[:] for v in rel["x_fields"]]
-        #         print("    " + str(p))
-        #         print("  " + "and '" + rel["y_attribute"] + "' of:")
-        #         print("    " + str('-'.join([f.name for f in rel["y_fields"]])))
-        #         p = [v.getValues()[:] for v in rel["y_fields"]]
-        #         print("    " + str(p))
+        # for key, value in clusters.items():
+        #     print(value)
+        new_symbol = list(clusters.items())[-1][1]
+        print(new_symbol)
+        rels = RelationFinder.findOnSymbol(new_symbol)
+        for child in new_symbol.fields[-1].domain.children:
+            print(len(child.currentValue))
+        for rel in rels:
+            print("  " + rel["relation_type"] + ", between '" + rel["x_attribute"] + "' of:")
+            print("    " + str('-'.join([f.name for f in rel["x_fields"]])))
+            p = [v.getValues()[:] for v in rel["x_fields"]]
+            print("    " + str(p))
+            print("  " + "and '" + rel["y_attribute"] + "' of:")
+            print("    " + str('-'.join([f.name for f in rel["y_fields"]])))
+            p = [v.getValues()[:] for v in rel["y_fields"]]
+            print("    " + str(p))
 
 
     @staticmethod
@@ -78,8 +73,3 @@ class TestFormat(unittest.TestCase):
     #     print(f0)
 
 TestFormat.test_split_offset()
-# TestFormat.test_split_delimiter()
-# TestFormat.test_message_parser()
-# good_symbol = TestFormat.test_split_static()
-# print(5j)
-# print(FieldSplitOffset.split_bytes_by_offsets(b'\x07\xbe[\x05\x08,3c\x80\x00\x07\x00d', [3,4,5,12]))

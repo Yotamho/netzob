@@ -17,7 +17,6 @@ class FieldSplitOffset(object):
     def split(field: Field, offsets):
         """
 
-        FIXME works only for separating by 2 offsets, otherwise will raise error when parsed by MessageParser.
         :param field:
         :param offsets:
         :return:
@@ -28,7 +27,7 @@ class FieldSplitOffset(object):
 
         for cell in field.getValues(encoded=False, styled=False):
             splitted_messages.append(FieldSplitOffset.split_bytes_by_offsets(cell, offsets))
-        splitted_fields = [list(set(domain)) for domain in itertools.zip_longest(*splitted_messages)]
+        splitted_fields = list(itertools.zip_longest(*splitted_messages))
         new_fields = []
         for (i, val) in enumerate(splitted_fields):
             fName = "Field-{0}".format(i)
@@ -44,22 +43,6 @@ class FieldSplitOffset(object):
 
         field.fields = new_fields
 
-    # @staticmethod
-    # def split_bytes_by_offsets(bytes_, offsets):
-    #     """
-    #
-    #     :param bytes_:
-    #     :param offsets:
-    #     :return:
-    #     """
-    #     splitted_message = []
-    #     splitted_message.append(TypeConverter.convert(bytes_[:offsets[0]], Raw, HexaString))
-    #     for i, offset in enumerate(offsets[1:]):
-    #         splitted_message.append(TypeConverter.convert(bytes_[offsets[i]:offset], Raw, HexaString))
-    #         bytes_ = bytes_[offset:]
-    #     splitted_message.append(TypeConverter.convert(bytes_, Raw, HexaString))
-    #     return splitted_message
-
     @staticmethod
     def split_bytes_by_offsets(bytes_, offsets):
         """
@@ -69,7 +52,8 @@ class FieldSplitOffset(object):
         :return:
         """
         splitted_message = []
-        offsets.insert(0, 0)
+        splitted_message.append(TypeConverter.convert(bytes_[:offsets[0]], Raw, HexaString))
+        bytes_ = bytes_[offsets[0]:]
         for i, start_offset in enumerate(offsets[:-1]):
             splitted_message.append(TypeConverter.convert(bytes_[:offsets[i+1]-start_offset], Raw, HexaString))
             bytes_ = bytes_[offsets[i+1]-start_offset:]
