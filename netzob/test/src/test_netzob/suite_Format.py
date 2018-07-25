@@ -1,15 +1,17 @@
 import unittest
+
+# import os, sys
+# sys.path.insert('/root/IdeaProjects/netzob/netzob/src')
+
 from netzob.Import.PCAPImporter.all import PCAPImporter
-from netzob.Inference.Vocabulary.CorrelationFinder import CorrelationFinder
 from netzob.Inference.Vocabulary.EntropyMeasurement import EntropyMeasurement
 from netzob.Inference.Vocabulary.FormatOperations.FieldSplitOffset import FieldSplitOffset
 from netzob.Inference.Vocabulary.RelationFinder import RelationFinder
 from netzob.Inference.Vocabulary.all import Format
+from netzob.Model.Grammar.Automata import Automata
 from netzob.Model.Vocabulary.AbstractField import AbstractField
-from netzob.Model.Vocabulary.Domain.Parser.MessageParser import MessageParser
 from netzob.Model.Vocabulary.Domain.Variables.Leafs.Size import Size
-from netzob.Model.Vocabulary.Field import Field
-from netzob.Model.Vocabulary.Messages.AbstractMessage import AbstractMessage
+from netzob.Model.Vocabulary.Session import Session
 from netzob.Model.Vocabulary.Symbol import Symbol
 from netzob.Model.Vocabulary.Types.Raw import Raw
 
@@ -55,6 +57,12 @@ class TestFormat(unittest.TestCase):
 
         message_to_verify = messages[1]
         print(AbstractField.abstract(message_to_verify.data, list(clusters.values())))
+
+        session = Session(messages)
+        abstractSession = session.abstract(list(clusters.values()))
+        automata = Automata.generateChainedStatesAutomata(abstractSession, list(clusters.values()))
+        dotcode = automata.generateDotCode()
+        print(dotcode)
 
 
     @staticmethod
