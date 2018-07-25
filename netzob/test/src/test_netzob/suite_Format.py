@@ -4,6 +4,7 @@ import unittest
 # sys.path.insert('/root/IdeaProjects/netzob/netzob/src')
 
 from netzob.Import.PCAPImporter.all import PCAPImporter
+from netzob.Inference.Vocabulary.CorrelationFinder import CorrelationFinder
 from netzob.Inference.Vocabulary.EntropyMeasurement import EntropyMeasurement
 from netzob.Inference.Vocabulary.FormatOperations.FieldSplitOffset import FieldSplitOffset
 from netzob.Inference.Vocabulary.RelationFinder import RelationFinder
@@ -39,9 +40,21 @@ class TestFormat(unittest.TestCase):
         clusters = Format.clusterByKeyField(symbol, symbol.fields[1])
         for key, value in clusters.items():
             print(value)
-
         new_symbol = list(clusters.items())[-1][1]
         print(new_symbol)
+
+        rels = CorrelationFinder.find(new_symbol, minMic=0.7)
+        for rel in rels:
+            print("  " + rel["relation_type"] + ", between '" + rel["x_attribute"] + "' of:")
+            print("    " + str('-'.join([f.name for f in rel["x_fields"]])))
+            p = [v.getValues()[:] for v in rel["x_fields"]]
+            print("    " + str(p))
+            print("  " + "and '" + rel["y_attribute"] + "' of:")
+            print("    " + str('-'.join([f.name for f in rel["y_fields"]])))
+            p = [v.getValues()[:] for v in rel["y_fields"]]
+            print("    " + str(p))
+            print("  by MIC: {} and PEARSON: {}".format(rel["mic"], rel["pearson"]))
+
         rels = RelationFinder.findOnSymbol(new_symbol)
         for rel in rels:
             print("  " + rel["relation_type"] + ", between '" + rel["x_attribute"] + "' of:")
