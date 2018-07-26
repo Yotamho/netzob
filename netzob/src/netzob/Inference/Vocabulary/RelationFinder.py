@@ -1,39 +1,43 @@
 # -*- coding: utf-8 -*-
 
-#+---------------------------------------------------------------------------+
-#|          01001110 01100101 01110100 01111010 01101111 01100010            |
-#|                                                                           |
-#|               Netzob : Inferring communication protocols                  |
-#+---------------------------------------------------------------------------+
-#| Copyright (C) 2011-2017 Georges Bossert and Frédéric Guihéry              |
-#| This program is free software: you can redistribute it and/or modify      |
-#| it under the terms of the GNU General Public License as published by      |
-#| the Free Software Foundation, either version 3 of the License, or         |
-#| (at your option) any later version.                                       |
-#|                                                                           |
-#| This program is distributed in the hope that it will be useful,           |
-#| but WITHOUT ANY WARRANTY; without even the implied warranty of            |
-#| MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the              |
-#| GNU General Public License for more details.                              |
-#|                                                                           |
-#| You should have received a copy of the GNU General Public License         |
-#| along with this program. If not, see <http://www.gnu.org/licenses/>.      |
-#+---------------------------------------------------------------------------+
-#| @url      : http://www.netzob.org                                         |
-#| @contact  : contact@netzob.org                                            |
-#| @sponsors : Amossys, http://www.amossys.fr                                |
-#|             Supélec, http://www.rennes.supelec.fr/ren/rd/cidre/           |
-#+---------------------------------------------------------------------------+
+# +---------------------------------------------------------------------------+
+# |          01001110 01100101 01110100 01111010 01101111 01100010            |
+# |                                                                           |
+# |               Netzob : Inferring communication protocols                  |
+# +---------------------------------------------------------------------------+
+# | Copyright (C) 2011-2017 Georges Bossert and Frédéric Guihéry              |
+# | This program is free software: you can redistribute it and/or modify      |
+# | it under the terms of the GNU General Public License as published by      |
+# | the Free Software Foundation, either version 3 of the License, or         |
+# | (at your option) any later version.                                       |
+# |                                                                           |
+# | This program is distributed in the hope that it will be useful,           |
+# | but WITHOUT ANY WARRANTY; without even the implied warranty of            |
+# | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the              |
+# | GNU General Public License for more details.                              |
+# |                                                                           |
+# | You should have received a copy of the GNU General Public License         |
+# | along with this program. If not, see <http://www.gnu.org/licenses/>.      |
+# +---------------------------------------------------------------------------+
+# | @url      : http://www.netzob.org                                         |
+# | @contact  : contact@netzob.org                                            |
+# | @sponsors : Amossys, http://www.amossys.fr                                |
+# |             Supélec, http://www.rennes.supelec.fr/ren/rd/cidre/           |
+# +---------------------------------------------------------------------------+
 
-#+----------------------------------------------
-#| Global Imports
-#+----------------------------------------------
+# +----------------------------------------------
+# | Global Imports
+# +----------------------------------------------
 import uuid
 import math
 
-#+----------------------------------------------
-#| Local Imports
-#+----------------------------------------------
+# +----------------------------------------------
+# | Local Imports
+# +----------------------------------------------
+import zlib
+
+from pycrc.algorithms import Crc
+
 from netzob.Common.Utils.Decorators import typeCheck, NetzobLogger
 from netzob.Model.Vocabulary.Types.TypeConverter import TypeConverter
 from netzob.Model.Vocabulary.Types.AbstractType import AbstractType
@@ -87,6 +91,8 @@ class RelationFinder(object):
     # Field's attributes
     ATTR_VALUE = "value"
     ATTR_SIZE = "size"
+    ATTR_CRC32 = "crc32"
+    ATTR_TIGER_CRC16 = "tiger_crc16"
     AVAILABLE_ATTRIBUTES = [ATTR_VALUE, ATTR_SIZE]
 
     # Relation types
@@ -96,6 +102,7 @@ class RelationFinder(object):
     REL_UNKNOWN = "Unknown"
 
     def __init__(self):
+        self.tiger_crc = Crc(width=16, poly=0x1021, xor_in=0x0000, xor_out=0xFFFF, reflect_in=True, reflect_out=True)
         pass
 
     @staticmethod
@@ -143,7 +150,6 @@ class RelationFinder(object):
     #                 for rel_id, rel_conf in enumerate(rels):
     #                     print "  %d. F[%d][%d:%d]" % ((rel_id,) + rel_conf)
 
-
     # def executeOnCells(self, cellsTable):
     #     if cellsTable:
     #         # Invert array dimensions liks this:
@@ -175,7 +181,7 @@ class RelationFinder(object):
                         break
                 if isRelation:
 
-                    #TODO make configurable
+                    # TODO make configurable
                     # # Do no keep relations where a field's values does not change
                     # if len(set(x_values)) == 1 or len(set(y_values)) == 1:
                     #     continue
@@ -184,10 +190,10 @@ class RelationFinder(object):
                     (y_fields, y_attribute) = attributeValues_headers[j]
                     # The relation should not apply on the same field
                     if len(x_fields) == 1 and len(y_fields) == 1 and x_fields[
-                            0].id == y_fields[0].id:
+                        0].id == y_fields[0].id:
                         continue
                     relation_type = self._findRelationType(x_attribute,
-                                                           y_attribute,x_fields,y_fields)
+                                                           y_attribute, x_fields, y_fields)
                     # We do not consider unqualified relation (for example, the size of a field is linked to the size of another field)
                     if relation_type == self.REL_UNKNOWN:
                         continue
@@ -213,7 +219,7 @@ class RelationFinder(object):
                                 continue
                     self._logger.debug("Relation found between '" + str(
                         x_fields) + ":" + x_attribute + "' and '" + str(
-                            y_fields) + ":" + y_attribute + "'")
+                        y_fields) + ":" + y_attribute + "'")
                     id_relation = str(uuid.uuid4())
                     results.append({
                         'id': id_relation,
@@ -255,8 +261,8 @@ class RelationFinder(object):
 
         # Try to find a relation that matches each cell
         relation_fcts = {}
-        #relation_fcts[self.REL_SIZE] = self._sizeRelation(x_attribute,y_attribute)
-        #TODO Pass correct parameters to equalRelation
+        # relation_fcts[self.REL_SIZE] = self._sizeRelation(x_attribute,y_attribute)
+        # TODO Pass correct parameters to equalRelation
         relation_fcts[self.REL_SIZE] = self._sizeRelation
         relation_fcts[self.REL_EQUALITY] = self._equalRelation
 
@@ -269,7 +275,8 @@ class RelationFinder(object):
                             isRelation = False
                             break
                     if isRelation:
-                        self._logger.debug("Relation found between '" + x_attribute + ":" + str(x_field.name) + "' and '" + y_attribute + ":" + str(y_field.name) + "'")
+                        self._logger.debug("Relation found between '" + x_attribute + ":" + str(
+                            x_field.name) + "' and '" + y_attribute + ":" + str(y_field.name) + "'")
                         self._logger.debug("  Relation: " + relation_name)
                         id_relation = str(uuid.uuid4())
                         results.append({'id': id_relation,
@@ -280,23 +287,25 @@ class RelationFinder(object):
                                         'y_attribute': y_attribute})
         return results
 
-    def _findRelationType(self, x_attribute, y_attribute,x_fields,y_fields):
+    def _findRelationType(self, x_attribute, y_attribute, x_fields, y_fields):
         typeRelation = self.REL_UNKNOWN
-        if (x_attribute == self.ATTR_VALUE and y_attribute == self.ATTR_SIZE) or (x_attribute == self.ATTR_SIZE and y_attribute == self.ATTR_VALUE):
+        if (x_attribute == self.ATTR_VALUE and y_attribute == self.ATTR_SIZE) or (
+                x_attribute == self.ATTR_SIZE and y_attribute == self.ATTR_VALUE):
             typeRelation = self.REL_SIZE
         elif x_attribute == y_attribute == self.ATTR_VALUE:
             typeRelation = self.REL_DATA
-        elif self._checkEqualityRelation(x_fields,y_fields):
+        elif self._checkEqualityRelation(x_fields, y_fields) or {self.ATTR_VALUE, self.ATTR_TIGER_CRC16} == {
+        x_attribute, y_attribute}:
             typeRelation = self.REL_EQUALITY
         return typeRelation
 
-    def _checkEqualityRelation(self,x_fields,y_fields):
+    def _checkEqualityRelation(self, x_fields, y_fields):
         x_values = []
         for x_field in x_fields:
             x_values += x_field.getValues(encoded=False, styled=False)
         y_values = []
         for y_field in y_fields:
-                y_values += y_field.getValues(encoded=False, styled=False)
+            y_values += y_field.getValues(encoded=False, styled=False)
         if set(x_values) == set(y_values):
             return True
         else:
@@ -352,6 +361,13 @@ class RelationFinder(object):
                 # We generate lines and header for fields values
                 line_header.append((fields[i:j], self.ATTR_SIZE))
                 lines_data.append(self._generateSizeValues(concatCellsData))
+
+                # # Generate CRC32
+                # line_header.append((fields[i:j], self.ATTR_CRC32))
+                # lines_data.append(self._generateCRC32(concatCellsData))
+
+                line_header.append((fields[i:j], self.ATTR_TIGER_CRC16))
+                lines_data.append(self._generateTigerCRC16(concatCellsData))
 
         # # # Now we generate values for fields sizes
         # # (multipleSize_Header, multipleSize_lines) = self._generateSizeFieldFromBeginingOfField(symbol)
@@ -424,3 +440,18 @@ class RelationFinder(object):
                 result.append(0)
         return result
 
+    def _generateCRC32(self, cellsData):
+        result = []
+        for data in cellsData:
+            valCrc32 = zlib.crc32(data)  # & 0xFFFFFFFF
+            result.append(valCrc32)
+        return result
+
+    def _generateTigerCRC16(self, cellsData):
+        result = []
+        for data in cellsData:
+            data = data + bytes([len(data)])
+            valCrc32 = int.from_bytes(int.to_bytes(self.tiger_crc.bit_by_bit_fast(data), 2, byteorder="big"),
+                                      byteorder="big", signed=True)
+            result.append(valCrc32)
+        return result

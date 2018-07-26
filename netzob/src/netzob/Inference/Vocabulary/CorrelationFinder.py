@@ -50,12 +50,14 @@ from netzob.Model.Vocabulary.Types.TypeConverter import TypeConverter
 from netzob.Model.Vocabulary.Types.Raw import Raw
 from netzob.Model.Vocabulary.Types.Integer import Integer
 from netzob.Inference.Vocabulary.RelationFinder import RelationFinder
+from pycrc.algorithms import Crc
 
 
 @NetzobLogger
 class CorrelationFinder(object):
     """Correlation identification based on MINE (Maximal
     Information-based Nonparametric Exploration) statistics.
+    TODO: implement CRC in class correctly
 
     >>> import binascii
     >>> from netzob.all import *
@@ -72,6 +74,7 @@ class CorrelationFinder(object):
     ATTR_VALUE = "value"
     ATTR_SIZE = "size"
     ATTR_CRC32 = "crc32"
+    ATTR_TIGER_CRC16 = "tiger_crc16"
 
     # Relation types
     REL_SIZE = "SizeRelation"
@@ -107,6 +110,7 @@ class CorrelationFinder(object):
 
     def __init__(self, minMic=0.7):
         self.minMic = minMic
+        self.tiger_crc = Crc(width=16, poly=0x1021, xor_in=0x0000, xor_out=0x0000, reflect_in=False, reflect_out=False)
 
     @typeCheck(AbstractField)
     def execute(self, symbol):
@@ -200,6 +204,10 @@ class CorrelationFinder(object):
                 line_header.append((fields[i:j], self.ATTR_SIZE))
                 lines_data.append(self._generateSizeValues(concatCellsData))
 
+                # Generate CRC32
+                line_header.append((fields[i:j], self.ATTR_CRC32))
+                lines_data.append(self._generateCRC32(concatCellsData))
+
         # # # Now we generate values for fields sizes
         # # (multipleSize_Header, multipleSize_lines) = self._generateSizeFieldFromBeginingOfField(symbol)
         # # line_header.extend(multipleSize_Header)
@@ -250,19 +258,21 @@ class CorrelationFinder(object):
                 result.append(0)
         return result
 
-    def _generateCRC32(self, symbol):
-        header = []
-        lines = []
-        header.append(self.ATTR_CRC32)
-        messages = symbol.getMessages()
-        for message in messages:
-            line = []
-            data = message.getStringData()
-            rawContent = TypeConverter.netzobRawToPythonRaw(data)
-            valCrc32 = zlib.crc32(rawContent) & 0xFFFFFFFF
-            line.append(str(valCrc32))
-            lines.append(b",".join(line))
-        return (header, lines)
+    def _generateCRC32(self, cellsData):
+        result = []
+        for data in cellsData:
+            valCrc32 = zlib.crc32(data) & 0xFFFFFFFF
+            result.append(valCrc32)
+        return result
+
+    def _generateTigerCRC16(self, cellsData):
+        result = []
+        for data in cellsData:
+            data = data + bytes([len(data)])
+            valCrc32 = self.tiger_crc.bit_by_bit_fast(data)
+            result.append(valCrc32)
+        return result
+
 
     def _generateSizeFieldFromBeginingOfField(self, symbol):
         header = []

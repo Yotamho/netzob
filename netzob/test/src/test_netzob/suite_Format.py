@@ -35,25 +35,25 @@ class TestFormat(unittest.TestCase):
 
         Format.splitStatic(symbol)
 
-        Format.splitOffset(symbol, [3, 4, 5])
+        Format.splitOffset(symbol, [1, 3, 4, 5])
 
-        clusters = Format.clusterByKeyField(symbol, symbol.fields[1])
+        clusters = Format.clusterByKeyField(symbol, symbol.fields[2])
         for key, value in clusters.items():
             print(value)
         new_symbol = list(clusters.items())[-1][1]
         print(new_symbol)
 
-        rels = CorrelationFinder.find(new_symbol, minMic=0.7)
-        for rel in rels:
-            print("  " + rel["relation_type"] + ", between '" + rel["x_attribute"] + "' of:")
-            print("    " + str('-'.join([f.name for f in rel["x_fields"]])))
-            p = [v.getValues()[:] for v in rel["x_fields"]]
-            print("    " + str(p))
-            print("  " + "and '" + rel["y_attribute"] + "' of:")
-            print("    " + str('-'.join([f.name for f in rel["y_fields"]])))
-            p = [v.getValues()[:] for v in rel["y_fields"]]
-            print("    " + str(p))
-            print("  by MIC: {} and PEARSON: {}".format(rel["mic"], rel["pearson"]))
+        # rels = CorrelationFinder.find(new_symbol, minMic=0.7)
+        # for rel in rels:
+        #     print("  " + rel["relation_type"] + ", between '" + rel["x_attribute"] + "' of:")
+        #     print("    " + str('-'.join([f.name for f in rel["x_fields"]])))
+        #     p = [v.getValues()[:] for v in rel["x_fields"]]
+        #     print("    " + str(p))
+        #     print("  " + "and '" + rel["y_attribute"] + "' of:")
+        #     print("    " + str('-'.join([f.name for f in rel["y_fields"]])))
+        #     p = [v.getValues()[:] for v in rel["y_fields"]]
+        #     print("    " + str(p))
+        #     print("  by MIC: {} and PEARSON: {}".format(rel["mic"], rel["pearson"]))
 
         rels = RelationFinder.findOnSymbol(new_symbol)
         for rel in rels:
@@ -65,17 +65,18 @@ class TestFormat(unittest.TestCase):
             print("    " + str('-'.join([f.name for f in rel["y_fields"]])))
             p = [v.getValues()[:] for v in rel["y_fields"]]
             print("    " + str(p))
-            rel["x_fields"][0].domain = Size(rel["y_fields"], factor=1/8.0)
+            if rel["relation_type"] == "SizeRelation":
+                rel["x_fields"][0].domain = Size(rel["y_fields"], factor=1/8.0)
         print(new_symbol.fields[2].domain)
 
         message_to_verify = messages[1]
         print(AbstractField.abstract(message_to_verify.data, list(clusters.values())))
 
-        session = Session(messages)
-        abstractSession = session.abstract(list(clusters.values()))
-        automata = Automata.generateChainedStatesAutomata(abstractSession, list(clusters.values()))
-        dotcode = automata.generateDotCode()
-        print(dotcode)
+        # session = Session(messages)
+        # abstractSession = session.abstract(list(clusters.values()))
+        # automata = Automata.generateChainedStatesAutomata(abstractSession, list(clusters.values()))
+        # dotcode = automata.generateDotCode()
+        # print(dotcode)
 
 
     @staticmethod
